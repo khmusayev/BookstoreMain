@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 
 import com.bookstore.domain.Book;
 import com.bookstore.domain.BookToCartItem;
@@ -40,12 +41,15 @@ public class CartItemServiceImpl implements CartItemService {
 	}
 
 	@Override
-	public CartItem addBookToCartItem(Book book, User user, int qty) {
+	public CartItem addBookToCartItem(Book book, User user, int qty, Model model) {
 		List<CartItem> cartItemList = findByShoppingCart(user.getShoppingCart());
 		
 		for(CartItem cartItem : cartItemList) {
 			if(book.getId() == cartItem.getBook().getId()) {
-				cartItem.setQty(cartItem.getQty() + qty);
+				if(cartItem.getQty() + qty > book.getInStockNumber()) {
+					cartItem.setQty(book.getInStockNumber());
+					model.addAttribute("notEnoughStock", true);
+				} else cartItem.setQty(cartItem.getQty() + qty);
 				cartItem.setSubtotal(new BigDecimal(book.getOurPrice()).multiply(new BigDecimal(qty)));
 				cartItemRepository.save(cartItem);
 				return cartItem;
@@ -65,6 +69,17 @@ public class CartItemServiceImpl implements CartItemService {
 		bookToCartItemRepository.save(bookToCartItem);
 		
 		return cartItem;
+	}
+
+	@Override
+	public CartItem findById(Long cartItemId) {
+		return cartItemRepository.findOne(cartItemId);
+	}
+
+	@Override
+	public void removeCartItem(CartItem cartItem) {
+		bookToCartItemRepository.deleteByCartItem(cartItem);
+		cartItemRepository.delete(cartItem);
 	}
 
 }

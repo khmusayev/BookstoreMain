@@ -23,16 +23,16 @@ import com.bookstore.service.UserService;
 public class ShoppingCartController {
 	
 	@Autowired
-	private UserService userService; 
+	private UserService userService;
 	
 	@Autowired
 	private CartItemService cartItemService;
 	
 	@Autowired
-	private ShoppingCartService shoppingCartService;
+	private BookService bookService;
 	
 	@Autowired
-	private BookService bookService;
+	private ShoppingCartService shoppingCartService;
 	
 	@RequestMapping("/cart")
 	public String shoppingCart(Model model, Principal principal) {
@@ -40,6 +40,7 @@ public class ShoppingCartController {
 		ShoppingCart shoppingCart = user.getShoppingCart();
 		
 		List<CartItem> cartItemList = cartItemService.findByShoppingCart(shoppingCart);
+		
 		shoppingCartService.updateShoppingCart(shoppingCart);
 		
 		model.addAttribute("cartItemList", cartItemList);
@@ -47,25 +48,43 @@ public class ShoppingCartController {
 		
 		return "shoppingCart";
 	}
-	
+
 	@RequestMapping("/addItem")
 	public String addItem(
 			@ModelAttribute("book") Book book,
-			@ModelAttribute("book") String qty,
+			@ModelAttribute("qty") String qty,
 			Model model, Principal principal
 			) {
-		
 		User user = userService.findByUsername(principal.getName());
 		book = bookService.findOne(book.getId());
 		
-		if(Integer.parseInt(qty) > book.getInStockNumber()) {
+		if (Integer.parseInt(qty) > book.getInStockNumber()) {
 			model.addAttribute("notEnoughStock", true);
 			return "forward:/bookDetail?id="+book.getId();
 		}
-		CartItem cartItem = cartItemService.addBookToCartItem(book, user, Integer.parseInt(qty));
+		
+		CartItem cartItem = cartItemService.addBookToCartItem(book, user, Integer.parseInt(qty), model);
 		model.addAttribute("addBookSuccess", true);
+		
 		return "forward:/bookDetail?id="+book.getId();
 	}
 	
-
+	@RequestMapping("/updateCartItem")
+	public String updateShoppingCart(
+		@ModelAttribute("id") Long cartItemId,
+				@ModelAttribute("qty") int qty
+				) {
+		CartItem cartItem = cartItemService.findById(cartItemId);
+		cartItem.setQty(qty);
+		cartItemService.updateCartItem(cartItem);
+		return "forward:/shoppingCart/cart";
+	}
+	
+	@RequestMapping("/removeCartItem")
+	public String removeCartItem(
+		@ModelAttribute("id") Long cartItemId
+				) {
+		cartItemService.removeCartItem(cartItemService.findById(cartItemId));
+		return "forward:/shoppingCart/cart";
+	}
 }
